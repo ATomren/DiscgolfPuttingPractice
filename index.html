@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Putt Log</title>
+<style>
+:root{--bg:#e8eee9;--card:#fff;--ink:#17302b;--mute:#6b7f78;--line:#d3ddd8;--hit:#2f8f5b;--acc:#e8590c;--track:#dfe7e3;color-scheme:light}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1c19;--card:#182a26;--ink:#e6f0ec;--mute:#8fa59d;--line:#2a403a;--hit:#4cc58a;--acc:#ff8a3d;--track:#233732;color-scheme:dark}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 "Avenir Next","Trebuchet MS",system-ui,sans-serif}
+#app{max-width:520px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) 14px 110px}
+.card{background:var(--card);border-radius:18px;padding:16px;margin-bottom:12px;border:1px solid var(--line)}
+h2{font-size:15px;margin:0 0 10px;font-weight:700}
+p{margin:4px 0}.mute{color:var(--mute);font-size:14px}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+.hero{display:flex;gap:18px;align-items:center}
+.trk{fill:none;stroke:var(--track);stroke-width:12}
+.arc{fill:none;stroke:var(--hit);stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset .5s}
+.big{font-size:28px;font-weight:800;fill:var(--ink)}
+.step{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.step button{width:56px;height:56px;border-radius:50%;background:var(--track);font-size:28px;font-weight:700}
+.dist{text-align:center;font-size:44px;font-weight:800;line-height:1}
+.dist small{display:block;font-size:14px;font-weight:600;color:var(--acc);margin-top:4px}
+.disc{margin-left:auto;flex:none;width:76px;height:76px;border-radius:18px;background:var(--track);font-weight:800;font-size:30px;line-height:1}
+.disc small{display:block;font-size:12px;font-weight:600;color:var(--mute);margin-top:2px}
+#pad{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:5}
+#pad div{background:var(--card);border-radius:20px;padding:16px;width:min(300px,90vw)}
+#pad p{text-align:center;font-weight:700;margin:0 0 10px}
+#pad section{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#pad button{height:64px;border-radius:14px;background:var(--track);font-size:26px;font-weight:800}
+#pad button.on{background:var(--ink);color:var(--card)}
+.hits{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+.hits button{height:76px;border-radius:16px;background:var(--hit);color:#fff;font-size:30px;font-weight:800}
+.hits button:first-child{background:var(--track);color:var(--ink)}
+.hits button:active{transform:scale(.95)}
+.row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.row .l{width:84px;white-space:nowrap;font-weight:700;flex:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{flex:1;min-width:64px;padding:10px 6px;border-radius:12px;background:var(--track);font-weight:700}
+.chips button.on{background:var(--ink);color:var(--card)}
+select{font:inherit;width:100%;margin-top:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.rings{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.rings b{display:block}
+a.btn{text-decoration:none}
+.stand+.stand{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.bar{flex:1;height:14px;border-radius:7px;background:var(--track);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--hit);border-radius:7px}
+.row .r{width:84px;text-align:right;font-size:14px;flex:none}
+.list .row{border-top:1px solid var(--line)}
+.x{background:none;color:var(--mute);font-size:20px;padding:0 6px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;padding:16px 0;background:none;font-weight:700;color:var(--mute)}
+nav button.on{color:var(--acc)}
+.btn{display:block;width:100%;padding:14px;border-radius:14px;background:var(--ink);color:var(--card);font-weight:700;text-align:center;margin-top:8px}
+.btn.alt{background:var(--track);color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.stats b{display:block;font-size:26px}
+#toast{position:fixed;left:14px;right:14px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:492px;margin:0 auto;background:var(--ink);color:var(--card);padding:12px 16px;border-radius:14px;display:none;justify-content:space-between;align-items:center}
+#toast button{background:none;color:var(--acc);font-weight:800}
+input[type=file]{width:100%;margin-top:8px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<div id="pad" data-a="padx"><div><p>Discs thrown</p><section></section></div></div>
+<nav><button data-a="tab" data-v="log">Log</button><button data-a="tab" data-v="today">Today</button><button data-a="tab" data-v="trends">Trends</button><button data-a="tab" data-v="settings">Settings</button></nav>
+<script>
+const VIPPS_NUMBER='+4794192321'; // copied to clipboard on tap, never shown on screen
+const VIPPS_URL='';     // paste your Vipps link here (leave empty to hide)
+const FEEDBACK_URL='';  // paste a feedback form link here (leave empty to hide)
+const K='puttlog.v1';
+let S={rounds:[],discs:3,dist:6,lastExport:0},tab='log',tt,padOpen=false,trend='zones',tm=null;
+try{const r=localStorage.getItem(K);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){toast('Could not save. Export now.')}};
+const $=s=>document.querySelector(s);
+const day=t=>new Date(t).toLocaleDateString('en-CA');
+const zone=d=>d<=10?'C1':d<=20?'C2':'Outside C2';
+const sum=a=>({n:a.reduce((x,r)=>x+r.n,0),h:a.reduce((x,r)=>x+r.h,0)});
+const pct=o=>o.n?Math.round(100*o.h/o.n):0;
+const col=p=>`hsl(${Math.round(p*1.2)} 65% 42%)`;
+const ZC={'C1':'#2f8f5b','C2':'#e8590c','Outside C2':'#5b6ee8'};
+const md=d=>(+d.slice(5,7))+'/'+(+d.slice(8));
+const today=()=>S.rounds.filter(r=>day(r.t)===day(Date.now()));
+
+function streak(){const ds=new Set(S.rounds.map(r=>day(r.t)));let c=0,d=new Date();if(!ds.has(day(d)))d.setDate(d.getDate()-1);while(ds.has(day(d))){c++;d.setDate(d.getDate()-1)}return c}
+
+function toast(msg,undo){const t=$('#toast');t.innerHTML=`<span>${msg}</span>${undo?'<button data-a="undo">Undo</button>':''}`;t.style.display='flex';clearTimeout(tt);tt=setTimeout(()=>t.style.display='none',4000)}
+
+function logView(){
+  const td=today(),s=sum(td),C=2*Math.PI*52,off=C*(1-(s.n?s.h/s.n:0));
+  let hits='';for(let i=0;i<=S.discs;i++)hits+=`<button data-a="hit" data-v="${i}">${i}</button>`;
+  const list=td.slice().reverse().map(r=>`<div class="row"><span class="l">${r.d} m</span><span style="flex:1">${r.h} of ${r.n}</span><button class="x" data-a="del" data-v="${r.t}">×</button></div>`).join('');
+  return `<div class="card hero"><svg viewBox="0 0 120 120" width="104" height="104"><circle cx="60" cy="60" r="52" class="trk"/><circle cx="60" cy="60" r="52" class="arc" style="stroke:${col(pct(s))}" stroke-dasharray="${C}" stroke-dashoffset="${off}" transform="rotate(-90 60 60)"/><text x="60" y="69" text-anchor="middle" class="big">${s.n?pct(s)+'%':'-'}</text></svg>
+  <div><b>Today</b><p>${s.h} of ${s.n} putts</p><p class="mute">${td.length} rounds, ${streak()} day streak</p></div><button class="disc" data-a="pad">${S.discs}<small>discs</small></button></div>
+  <div class="card"><h2>Distance</h2><div class="step"><button data-a="dist" data-v="-1">−</button><div class="dist">${S.dist} m<small>${zone(S.dist)}</small></div><button data-a="dist" data-v="1">+</button></div></div>
+  <div class="card"><h2>How many went in?</h2><div class="hits">${hits}</div></div>
+  ${list?`<div class="card list"><h2>Today's rounds</h2><div style="max-height:236px;overflow-y:auto">${list}</div></div>`:''}`;
+}
+
+function bars(rows){return rows.map(([l,o,min])=>`<div class="row"><span class="l">${l}</span><div class="bar"><i style="width:${pct(o)}%;background:${col(pct(o))}"></i></div><span class="r">${o.n?pct(o)+'%':'-'} <span class="mute">${o.h}/${o.n}</span></span></div>`).join('')}
+
+function zoneRings(rs){const C=2*Math.PI*52;return ['C1','C2','Outside C2'].map(n=>{const o=sum(rs.filter(r=>zone(r.d)===n));return `<div><svg viewBox="0 0 120 120" width="100%" style="max-width:104px"><circle cx="60" cy="60" r="52" class="trk"/><circle cx="60" cy="60" r="52" class="arc" style="stroke:${col(pct(o))}" stroke-dasharray="${C}" stroke-dashoffset="${C*(1-(o.n?o.h/o.n:0))}" transform="rotate(-90 60 60)"/><text x="60" y="69" text-anchor="middle" class="big">${o.n?pct(o)+'%':'-'}</text></svg><b>${n}</b><span class="mute">${o.h} of ${o.n}</span></div>`}).join('')}
+
+function todayView(){
+  const R=today();
+  if(!R.length)return `<div class="card"><h2>Today</h2><p class="mute">Nothing logged yet. Go putt!</p></div>`;
+  const t=sum(R);
+  const ds=[...new Set(R.map(r=>r.d))].sort((a,b)=>a-b).map(d=>[d+' m',sum(R.filter(r=>r.d===d))]);
+  return `<div class="card stats"><div><b>${t.n}</b><span class="mute">putts</span></div><div><b style="color:${col(pct(t))}">${pct(t)}%</b><span class="mute">hit rate</span></div><div><b>${R.length}</b><span class="mute">rounds</span></div></div>
+  <div class="card rings">${zoneRings(R)}</div>
+  <div class="card"><h2>By distance</h2>${bars(ds)}</div>`;
+}
+
+function series(rs){const m={};rs.forEach(r=>{(m[day(r.t)]=m[day(r.t)]||[]).push(r)});return Object.keys(m).sort().map(d=>({d,...sum(m[d])}))}
+
+function trendsView(){
+  const R=S.rounds;
+  if(!R.length)return `<div class="card"><h2>Trends</h2><p class="mute">Log some rounds to see your progress.</p></div>`;
+  const dists=[...new Set(R.map(r=>r.d))].sort((a,b)=>a-b);
+  const T=sum(R);
+  if(!dists.includes(tm))tm=dists.slice().sort((a,b)=>sum(R.filter(r=>r.d===b)).n-sum(R.filter(r=>r.d===a)).n)[0];
+  const defs=trend==='zones'?['C1','C2','Outside C2'].map(n=>({name:n,color:ZC[n],rs:R.filter(r=>zone(r.d)===n)}))
+    :trend==='m'?[{name:tm+' m',color:'var(--ink)',rs:R.filter(r=>r.d===tm)}]
+    :[{name:trend,color:'var(--ink)',rs:R.filter(r=>zone(r.d)===trend)}];
+  defs.forEach(x=>x.pts=series(x.rs));
+  const opts=[['zones','All zones'],['C1','C1'],['C2','C2'],['Outside C2','Outside'],['m','Meter']];
+  const chips=`<div class="chips">${opts.map(([k,l])=>`<button class="${trend===k?'on':''}" data-a="trend" data-v="${k}">${l}</button>`).join('')}</div>`;
+  const sel=trend==='m'?`<select id="mtr">${dists.map(d=>`<option value="${d}" ${d===tm?'selected':''}>${d} m</option>`).join('')}</select>`:'';
+  const ax=[...new Set(defs.flatMap(x=>x.pts.map(p=>p.d)))].sort().slice(-30);
+  let chart='<p class="mute">No putts from this range yet.</p>';
+  if(ax.length){
+    const W=320,H=150,L=30,B=18,pw=W-L-8;
+    const X=i=>L+(ax.length>1?i*pw/(ax.length-1):pw/2),Y=p=>8+(H-B-8)*(1-p/100);
+    let g=[0,50,100].map(v=>`<line x1="${L}" x2="${W}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="0" y="${Y(v)+4}" font-size="10" fill="var(--mute)">${v}%</text>`).join('');
+    defs.forEach(x=>{
+      const pts=ax.map((d,i)=>{const p=x.pts.find(q=>q.d===d);return p&&{x:X(i),y:Y(pct(p)),p:pct(p),n:p.n}}).filter(Boolean);
+      if(pts.length>1)g+=`<polyline points="${pts.map(q=>q.x+','+q.y).join(' ')}" fill="none" stroke="${x.color}" stroke-width="2" stroke-linejoin="round" opacity=".75"/>`;
+      g+=pts.map(q=>`<circle cx="${q.x}" cy="${q.y}" r="${3+Math.min(3,q.n/6)}" fill="${defs.length>1?x.color:col(q.p)}" stroke="var(--card)" stroke-width="1.5"/>`).join('');
+    });
+    g+=`<text x="${L}" y="${H-3}" font-size="10" fill="var(--mute)">${md(ax[0])}</text><text x="${W}" y="${H-3}" font-size="10" text-anchor="end" fill="var(--mute)">${md(ax[ax.length-1])}</text>`;
+    chart=`<svg viewBox="0 0 ${W} ${H}" width="100%">${g}</svg><p class="mute">Each dot is one practice day. Bigger dot = more putts.</p>`;
+  }
+  const arrow=(dl,txt)=>`<span style="color:${dl>0?'var(--hit)':dl<0?'#d9534f':'var(--mute)'};font-weight:700">${dl>0?'▲':dl<0?'▼':'='} ${Math.abs(dl)}</span> <span class="mute">${txt}</span>`;
+  const rows=defs.map(x=>{
+    const dot=defs.length>1?`<span class="dot" style="background:${x.color}"></span>`:'';
+    const all=sum(x.rs);
+    if(!all.n)return `<div class="stand"><div class="row">${dot}<span class="l" style="width:96px">${x.name}</span><span class="mute">no putts yet</span></div></div>`;
+    const P=x.pts,e=P.length-3,cur=pct(sum(P.slice(-3)));
+    const prev=e>0?P.slice(Math.max(0,e-3),e):[],first=e>3?P.slice(0,3):[];
+    const d1=prev.length?cur-pct(sum(prev)):null,d2=first.length?cur-pct(sum(first)):null;
+    const ar=d1===null?'':`<div style="text-align:center;font-size:14px">${arrow(d1,prev.length===3?'vs previous 3 days':'vs earlier days')}${d2===null?'':' &nbsp; '+arrow(d2,'vs first 3 days')}</div>`;
+    return `<div class="stand"><div class="row">${dot}<span class="l" style="width:96px">${x.name}</span><span style="flex:1;text-align:center;font-size:26px;font-weight:800;color:${col(cur)}">${cur}%</span><span class="mute" style="text-align:right;font-size:13px">all-time ${pct(all)}%<br>${all.n} putts</span></div>${ar}</div>`;
+  }).join('');
+  return `<div class="card stats"><div><b>${T.n}</b><span class="mute">putts</span></div><div><b style="color:${col(pct(T))}">${pct(T)}%</b><span class="mute">hit rate</span></div><div><b>${R.length}</b><span class="mute">rounds</span></div></div>
+  <div class="card">${chips}${sel}</div>
+  <div class="card"><h2>Hit rate per practice day</h2>${chart}</div>
+  <div class="card"><h2>Where you stand</h2>${rows}<p class="mute">Big number: your last 3 practice days.</p></div>`;
+}
+
+function dataView(){
+  const n=S.rounds.filter(r=>r.t>S.lastExport),p=sum(n).n;
+  const when=S.lastExport?Math.floor((Date.now()-S.lastExport)/864e5)+' days ago ('+day(S.lastExport)+')':'Never';
+  const sup=(VIPPS_URL||VIPPS_NUMBER||FEEDBACK_URL)?`<div class="card"><h2>Support</h2><p class="mute">Enjoying it? Tips and bug reports are welcome.</p>${FEEDBACK_URL?`<a class="btn alt" href="${FEEDBACK_URL}" target="_blank" rel="noopener">Send feedback</a>`:''}${VIPPS_URL?`<a class="btn" href="${VIPPS_URL}" target="_blank" rel="noopener">Support with Vipps</a>`:VIPPS_NUMBER?`<button class="btn" data-a="vipps">Support with Vipps</button><p class="mute">Copies my Vipps number. Open Vipps and paste it.</p>`:''}</div>`:'';
+  return `<div class="card"><h2>Backup</h2><p>Last exported: <b>${when}</b></p><p>Since then: <b>${p} putts</b> in ${n.length} rounds</p>
+  <button class="btn" data-a="export">Export backup</button></div>
+  <div class="card"><h2>Restore</h2><p class="mute">Adds rounds from a backup file. Rounds already here are kept and never duplicated.</p><input type="file" accept=".json,application/json" id="imp"></div>${sup}<div class="card"><h2>Reset</h2><p class="mute">Deletes all rounds in this browser. Export first if unsure.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="wipe">Delete all data</button></div>`;
+}
+
+function render(){
+  $('#app').innerHTML={log:logView,today:todayView,trends:trendsView,settings:dataView}[tab]();
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
+  $('#pad').style.display=padOpen?'flex':'none';
+  $('#pad section').innerHTML=[1,2,3,4,5,6,7,8,9].map(i=>`<button class="${i===S.discs?'on':''}" data-a="discs" data-v="${i}">${i}</button>`).join('');
+}
+
+function copyVipps(){
+  const ok=()=>toast('Number copied. Open Vipps and paste it. Thank you!');
+  const fb=()=>{const t=document.createElement('textarea');t.value=VIPPS_NUMBER;document.body.appendChild(t);t.select();try{document.execCommand('copy');ok()}catch(e){toast('Could not copy')}t.remove()};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(VIPPS_NUMBER).then(ok,fb);else fb();
+}
+
+function exportData(){
+  const b=new Blob([JSON.stringify({app:'puttlog',v:1,exported:Date.now(),rounds:S.rounds},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='puttlog-'+day(Date.now())+'.json';a.click();
+  S.lastExport=Date.now();save();render();
+}
+
+function importData(f){
+  const r=new FileReader();
+  r.onload=()=>{try{const j=JSON.parse(r.result);if(!Array.isArray(j.rounds))throw 0;
+    const ok=j.rounds.filter(x=>x&&x.t&&x.d>0&&x.n>0&&x.h>=0&&x.h<=x.n);
+    const have=new Set(S.rounds.map(r=>r.t+'-'+r.d)),add=ok.filter(x=>!have.has(x.t+'-'+x.d));
+    if(!add.length){toast('Nothing new in that file');return}
+    if(!confirm('Add '+add.length+' rounds from the file?'))return;
+    S.rounds=S.rounds.concat(add).sort((a,b)=>a.t-b.t);save();render();toast('Added '+add.length+' rounds')}catch(e){toast('Not a valid backup file')}};
+  r.readAsText(f);
+}
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,v=b.dataset.v;
+  if(a==='tab')tab=v;
+  else if(a==='trend')trend=v;
+  else if(a==='dist')S.dist=Math.min(40,Math.max(1,S.dist+ +v));
+  else if(a==='pad')padOpen=true;
+  else if(a==='padx'){if(e.target!==b)return;padOpen=false}
+  else if(a==='discs'){S.discs=+v;padOpen=false}
+  else if(a==='hit'){S.rounds.push({t:Date.now(),d:S.dist,n:S.discs,h:+v});toast(v+' of '+S.discs+' from '+S.dist+' m',1)}
+  else if(a==='undo'){S.rounds.pop();$('#toast').style.display='none'}
+  else if(a==='del')S.rounds=S.rounds.filter(r=>r.t!==+v);
+  else if(a==='vipps')return copyVipps();
+  else if(a==='wipe'){if(!confirm('Delete all '+S.rounds.length+' rounds? This cannot be undone.'))return;S.rounds=[];S.lastExport=0;toast('All data deleted')}
+  else if(a==='export')return exportData();
+  save();render();
+});
+document.addEventListener('change',e=>{if(e.target.id==='mtr'){tm=+e.target.value;render()}if(e.target.id==='imp'&&e.target.files[0])importData(e.target.files[0])});
+render();
+</script>
+</body>
+</html>
