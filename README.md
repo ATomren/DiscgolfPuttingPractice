@@ -34,7 +34,7 @@ Your putts are saved on your phone only. Go to Settings and tap "Export backup" 
 ## Cloud sync (optional, in testing)
 The cloud version at https://atomren.github.io/DiscgolfPuttingPractice/cloud.html lets you sign in with Google or email, so your putts are backed up and can be used on more than one device. Signing in is optional.
 
-Privacy: your putts and email are stored in Google Firebase (EU). Passwords are handled by Firebase and never visible to the app owner. The app owner can technically see stored stats and emails but does not look at them. You can delete your cloud data and account from Settings at any time.
+Privacy: your putts and email are stored in Google Firebase (EU). Passwords are handled by Firebase and never visible to the app owner. You can delete your cloud data and account from Settings at any time.
 
 ## Feedback
 Use "Send feedback" in Settings.
