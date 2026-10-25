@@ -29,10 +29,10 @@ Made a mistake? Tap Undo in the message that pops up, or the x next to a round i
 **Zones:** C1X is up to 10 m, C2 is 10 to 20 m, Outside is beyond 20 m.
 
 ## Backup
-Your putts are saved on your phone only. Go to Settings and tap "Export backup" now and then, and keep the file somewhere safe (email it to yourself, for example). To restore, use Restore in Settings with that file. Restoring never duplicates rounds you already have.
+If you are not signed in, your putts are saved on your phone only. Go to Settings and tap "Export backup" now and then, and keep the file somewhere safe (email it to yourself, for example). To restore, use Restore in Settings with that file. Restoring never duplicates rounds you already have.
 
-## Cloud sync (optional, in testing)
-The cloud version at https://atomren.github.io/DiscgolfPuttingPractice/cloud.html lets you sign in with Google or email, so your putts are backed up and can be used on more than one device. Signing in is optional.
+## Cloud sync (optional)
+Sign in under Settings > Account (with Google, or with email) to back up your putts in the cloud and use them on more than one device. Signing in is optional: without it, everything works the same and stays on your phone.
 
 Privacy: your putts and email are stored in Google Firebase (EU). Passwords are handled by Firebase and never visible to the app owner. You can delete your cloud data and account from Settings at any time.
 

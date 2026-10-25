@@ -50,7 +50,7 @@ select{font:inherit;width:100%;margin-top:10px;padding:12px;border-radius:12px;b
 .rings b{display:block}
 a.btn{text-decoration:none}
 .stand+.stand{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
-.win{width:100%;font:inherit;padding:8px;margin-top:4px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.win,.inp{width:100%;font:inherit;padding:8px;margin-top:4px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 #gm{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:5}
 #gm>div{background:var(--card);border-radius:20px;padding:16px;width:min(340px,92vw);max-height:92vh;overflow-y:auto}
 .dot{width:10px;height:10px;border-radius:50%;flex:none}
@@ -58,6 +58,7 @@ a.btn{text-decoration:none}
 .bar i{display:block;height:100%;background:var(--hit);border-radius:7px}
 .row .r{width:84px;text-align:right;font-size:14px;flex:none}
 .list .row{border-top:1px solid var(--line)}
+.lnk{display:block;margin:12px auto 0;background:none;color:var(--mute);font-size:14px;text-decoration:underline}
 .x{background:none;color:var(--mute);font-size:20px;padding:0 6px}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;padding:16px 0;background:none;font-weight:700;color:var(--mute)}
@@ -81,12 +82,21 @@ input[type=file]{width:100%;margin-top:8px}
 const VIPPS_NUMBER='4166NL'; // copied to clipboard on tap, never shown on screen
 const VIPPS_URL='';     // paste your Vipps link here (leave empty to hide)
 const FEEDBACK_URL='https://docs.google.com/forms/d/e/1FAIpQLScGDWXz6PX2gsrNYgSjqVr2vagVfksTCPE0ZS_LOUvTBoHH2w/viewform';  // paste a feedback form link here (leave empty to hide)
+const FIREBASE_CONFIG={ // public project identifiers, not secrets: the Firestore rules protect the data. null = local only
+  apiKey:"AIzaSyCxqPawrzt9YDiMdJiyYScWY78rWd13Ii0",
+  authDomain:"discgolfputtingpractice.firebaseapp.com",
+  projectId:"discgolfputtingpractice",
+  storageBucket:"discgolfputtingpractice.firebasestorage.app",
+  messagingSenderId:"788451489545",
+  appId:"1:788451489545:web:2b43822c3f1666c80a45d8"
+};
 const K='puttlog.v1';
-let S={rounds:[],discs:3,dist:6,lastExport:0,win:{},goal:null},tab='log',tt,padOpen=false,trend='zones',tm=null,gOpen=false,gd=null;
+let S={rounds:[],discs:3,dist:6,lastExport:0,win:{},goal:null,pend:[],pdel:[],cloudUid:'',lastPull:0,sSig:''},tab='log',tt,padOpen=false,trend='zones',tm=null,gOpen=false,gd=null,fb=null,user=null,syncing=false,cloudMsg='',st,lastSyncAt=0,showEm=false;
 try{const r=localStorage.getItem(K);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 S.dist=Math.max(4,S.dist);
 S.win=Object.assign({'C1X':[30,30],'C2':[20,20],'Outside C2':[10,10]},S.win);
-const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){toast('Could not save. Export now.')}};
+const persist=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){toast('Could not save. Export now.')}};
+const save=()=>{persist();if(user){clearTimeout(st);st=setTimeout(()=>sync(false),800)}};
 if(S.rounds.some(r=>r.d<4)){S.rounds=S.rounds.filter(r=>r.d>=4);save()}
 const $=s=>document.querySelector(s);
 const day=t=>new Date(t).toLocaleDateString('en-CA');
@@ -213,9 +223,9 @@ function dataView(){
   const when=S.lastExport?Math.floor((Date.now()-S.lastExport)/864e5)+' days ago ('+day(S.lastExport)+')':'Never';
   const sup=(VIPPS_URL||VIPPS_NUMBER||FEEDBACK_URL)?`<div class="card"><h2>Support</h2><p class="mute">Enjoying it? Tips and bug reports are welcome.</p>${FEEDBACK_URL?`<a class="btn alt" href="${FEEDBACK_URL}" target="_blank" rel="noopener">Send feedback</a>`:''}${VIPPS_URL?`<a class="btn" href="${VIPPS_URL}" target="_blank" rel="noopener">Support with Vipps</a>`:VIPPS_NUMBER?`<button class="btn" data-a="vipps">Support with Vipps</button><p class="mute">Copies my Vipps code. Open Vipps and paste it.</p>`:''}</div>`:'';
   const wr=['C1X','C2','Outside C2'].map(z=>`<div class="row"><span class="l" style="width:96px">${z}</span><label class="mute" style="flex:1;font-size:13px">Previous<input class="win" type="number" inputmode="numeric" min="5" max="500" data-z="${z}" data-i="0" value="${S.win[z][0]}"></label><label class="mute" style="flex:1;font-size:13px">First<input class="win" type="number" inputmode="numeric" min="5" max="500" data-z="${z}" data-i="1" value="${S.win[z][1]}"></label></div>`).join('');
-  return `<div class="card"><h2>Backup</h2><p>Last exported: <b>${when}</b></p><p>Since then: <b>${p} putts</b> in ${n.length} rounds</p>
+  return `${accountCard()}<div class="card"><h2>Backup</h2><p>Last exported: <b>${when}</b></p><p>Since then: <b>${p} putts</b> in ${n.length} rounds</p>
   <button class="btn" data-a="export">Export backup</button></div>
-  <div class="card"><h2>Restore</h2><p class="mute">Adds rounds from a backup file. Rounds already here are kept and never duplicated.</p><input type="file" accept=".json,application/json" id="imp"></div>${sup}<div class="card"><h2>Trend comparison</h2><p class="mute">Trends compares today with the previous and the first number of putts below, per zone.</p>${wr}</div><div class="card"><h2>Reset</h2><p class="mute">Deletes all rounds in this browser. Export first if unsure.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="wipe">Delete all data</button></div>`;
+  <div class="card"><h2>Restore</h2><p class="mute">Adds rounds from a backup file. Rounds already here are kept and never duplicated.</p><input type="file" accept=".json,application/json" id="imp"></div>${sup}<div class="card"><h2>Trend comparison</h2><p class="mute">Trends compares today with the previous and the first number of putts below, per zone.</p>${wr}</div><div class="card"><h2>Reset</h2><p class="mute">Deletes all rounds in this browser, and from your cloud account if signed in. Export first if unsure.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="wipe">Delete all data</button></div>`;
 }
 
 function render(){
@@ -225,6 +235,96 @@ function render(){
   if(gOpen)$('#gm>div').innerHTML=goalModal();
   $('#pad').style.display=padOpen?'flex':'none';
   $('#pad section').innerHTML=[1,2,3,4,5,6,7,8,9].map(i=>`<button class="${i===S.discs?'on':''}" data-a="discs" data-v="${i}">${i}</button>`).join('');
+}
+
+const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const rk=r=>r.t+'_'+r.d;
+function qAdd(r){if(FIREBASE_CONFIG)S.pend.push(r)}
+function qDel(r){
+  if(!FIREBASE_CONFIG)return;
+  const k=rk(r),had=S.pend.some(x=>rk(x)===k);
+  S.pend=S.pend.filter(x=>rk(x)!==k);
+  if(!had)S.pdel.push(k);
+}
+
+function applyCloud(x){
+  const c=cleanSettings(x);
+  if(c){if(c.discs)S.discs=c.discs;if(c.dist)S.dist=c.dist;if(c.win)Object.assign(S.win,c.win);if(c.goal)S.goal=c.goal}
+  if(x&&x.goal===null)S.goal=null;
+}
+
+async function initCloud(){
+  if(!FIREBASE_CONFIG)return;
+  try{
+    const V='https://www.gstatic.com/firebasejs/10.12.2/';
+    const [A,Au,F]=await Promise.all([import(V+'firebase-app.js'),import(V+'firebase-auth.js'),import(V+'firebase-firestore.js')]);
+    const app=A.initializeApp(FIREBASE_CONFIG);
+    fb={Au,F,auth:Au.getAuth(app),db:F.getFirestore(app)};
+    Au.onAuthStateChanged(fb.auth,u=>{user=u;cloudMsg='';render();if(u)sync(true)});
+  }catch(e){cloudMsg='Cloud unavailable right now. The app still works and will sync later.';render()}
+}
+
+async function sync(pull){
+  if(!fb||!user||syncing||!navigator.onLine)return;
+  syncing=true;
+  try{
+    const F=fb.F,db=fb.db,base=['users',user.uid],first=S.cloudUid!==user.uid;
+    if(first){S.pend=S.rounds.slice();S.pdel=[];S.lastPull=0;S.sSig=''}
+    const sent=S.pend.slice(),sentD=S.pdel.slice(),now=Date.now();
+    const ops=sent.map(r=>[rk(r),Object.assign({},r,{ts:now})]).concat(sentD.map(k=>[k,{del:true,ts:now}]));
+    for(let i=0;i<ops.length;i+=400){const b=F.writeBatch(db);ops.slice(i,i+400).forEach(([k,v])=>b.set(F.doc(db,...base,'rounds',k),v));await b.commit()}
+    S.pend=S.pend.filter(r=>!sent.includes(r));S.pdel=S.pdel.filter(k=>!sentD.includes(k));S.cloudUid=user.uid;
+    const sref=F.doc(db,...base,'meta','settings'),sig=()=>JSON.stringify([S.discs,S.dist,S.win,S.goal]);
+    const obj=()=>({discs:S.discs,dist:S.dist,win:S.win,goal:S.goal,ts:Date.now()});
+    if(!S.sSig){const g=await F.getDoc(sref);if(g.exists())applyCloud(g.data());else await F.setDoc(sref,obj());S.sSig=sig()}
+    else if(sig()!==S.sSig){await F.setDoc(sref,obj());S.sSig=sig()}
+    else if(pull){const g=await F.getDoc(sref);if(g.exists())applyCloud(g.data());S.sSig=sig()}
+    if(pull||first){
+      const q=F.query(F.collection(db,...base,'rounds'),F.where('ts','>',Math.max(0,S.lastPull-6e5)));
+      const snap=await F.getDocs(q),byK=new Map(S.rounds.map(r=>[rk(r),r]));let mx=S.lastPull;
+      snap.forEach(d=>{const v=d.data();mx=Math.max(mx,v.ts||0);
+        if(v.del)byK.delete(d.id);
+        else if(v.t&&v.d>=4&&v.n>0&&v.h>=0&&v.h<=v.n)byK.set(d.id,{t:v.t,d:v.d,n:v.n,h:v.h})});
+      S.rounds=[...byK.values()].sort((a,b)=>a.t-b.t);S.lastPull=mx;lastSyncAt=Date.now();
+    }
+    cloudMsg='Synced '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  }catch(e){cloudMsg='Sync failed, will retry when online'}
+  syncing=false;persist();render();
+}
+
+function cloudAuth(kind){
+  if(!fb)return;
+  const A=fb.Au,au=fb.auth,em=(($('#em')||{}).value||'').trim(),pw=($('#pw')||{}).value||'';
+  let p;
+  if(kind==='google')p=A.signInWithPopup(au,new A.GoogleAuthProvider());
+  else if(kind==='in')p=A.signInWithEmailAndPassword(au,em,pw);
+  else if(kind==='new')p=A.createUserWithEmailAndPassword(au,em,pw);
+  else if(kind==='reset'){if(!em){toast('Enter your email first');return}p=A.sendPasswordResetEmail(au,em).then(()=>toast('Password reset email sent'))}
+  else if(kind==='out')p=A.signOut(au);
+  if(p)p.catch(e=>toast('Failed: '+String(e.code||e.message).replace('auth/','').replace(/-/g,' ')));
+}
+
+async function cloudDelete(){
+  if(!fb||!user)return;
+  if(!confirm('Delete ALL your cloud data and your account? Putts on this phone stay. This cannot be undone.'))return;
+  const F=fb.F,db=fb.db,base=['users',user.uid];
+  try{
+    const snap=await F.getDocs(F.collection(db,...base,'rounds')),ids=[];snap.forEach(d=>ids.push(d.id));
+    for(let i=0;i<ids.length;i+=400){const b=F.writeBatch(db);ids.slice(i,i+400).forEach(k=>b.delete(F.doc(db,...base,'rounds',k)));await b.commit()}
+    await F.deleteDoc(F.doc(db,...base,'meta','settings'));
+    S.pend=[];S.pdel=[];S.cloudUid='';S.lastPull=0;S.sSig='';persist();
+    try{await fb.Au.deleteUser(user);toast('Cloud data and account deleted')}
+    catch(e){await fb.Au.signOut(fb.auth);toast('Cloud data deleted. To remove the account itself, sign in again and delete once more.')}
+  }catch(e){toast('Delete failed, try again')}
+}
+
+function accountCard(){
+  const h=b=>`<div class="card"><h2>Account</h2>${b}</div>`;
+  if(!FIREBASE_CONFIG)return h('<p class="mute">Cloud sync is not set up in this version.</p>');
+  if(!fb)return h(`<p class="mute">${esc(cloudMsg||'Loading cloud...')}</p>`);
+  if(!user)return h(`<p class="mute">Sign in to save your putts in the cloud so you never lose them. Your putts and email are stored in Google Firebase (EU). You can delete everything at any time.</p><button class="btn" data-a="c-google">Continue with Google</button>${showEm?`<input class="inp" id="em" type="email" placeholder="Email" autocomplete="email" style="margin-top:12px"><input class="inp" id="pw" type="password" placeholder="Password (min 6 characters)" autocomplete="current-password"><button class="btn alt" data-a="c-in">Sign in</button><button class="btn alt" data-a="c-new">Create account</button><button class="btn alt" data-a="c-reset">Forgot password</button>`:'<button class="lnk" data-a="c-email">Use email instead</button>'}`);
+  const w=S.pend.length+S.pdel.length;
+  return h(`<p>Signed in as <b>${esc(user.email||'anonymous')}</b></p><p class="mute">${esc(cloudMsg)}${w?' · '+w+' changes waiting to upload':''}</p><button class="btn" data-a="c-sync">Sync now</button><button class="btn alt" data-a="c-out">Sign out</button><button class="btn" style="background:#d9534f;color:#fff" data-a="c-del">Delete my cloud data and account</button>`);
 }
 
 function copyVipps(){
@@ -259,7 +359,7 @@ function importData(f){
     if(!add.length&&!st){toast('Nothing new in that file');return}
     const parts=[];if(add.length)parts.push('add '+add.length+' rounds');if(st)parts.push('restore goal and settings');
     const msg=parts.join(' and ');if(!confirm(msg[0].toUpperCase()+msg.slice(1)+' from the file?'))return;
-    if(add.length)S.rounds=S.rounds.concat(add).sort((a,b)=>a.t-b.t);
+    if(add.length){S.rounds=S.rounds.concat(add).sort((a,b)=>a.t-b.t);add.forEach(qAdd)}
     if(st){if(st.discs)S.discs=st.discs;if(st.dist)S.dist=st.dist;if(st.win)Object.assign(S.win,st.win);if(st.goal)S.goal=st.goal}
     save();render();toast(add.length?'Added '+add.length+' rounds':'Settings restored')}catch(e){toast('Not a valid backup file')}};
   r.readAsText(f);
@@ -273,9 +373,9 @@ document.addEventListener('click',e=>{
   else if(a==='pad')padOpen=true;
   else if(a==='padx'){if(e.target!==b)return;padOpen=false}
   else if(a==='discs'){S.discs=+v;padOpen=false}
-  else if(a==='hit'){S.rounds.push({t:Date.now(),d:S.dist,n:S.discs,h:+v});toast(v+' of '+S.discs+' from '+S.dist+' m',1)}
-  else if(a==='undo'){S.rounds.pop();$('#toast').style.display='none'}
-  else if(a==='del')S.rounds=S.rounds.filter(r=>r.t!==+v);
+  else if(a==='hit'){const nr={t:Date.now(),d:S.dist,n:S.discs,h:+v};S.rounds.push(nr);qAdd(nr);toast(v+' of '+S.discs+' from '+S.dist+' m',1)}
+  else if(a==='undo'){const ur=S.rounds.pop();if(ur)qDel(ur);$('#toast').style.display='none'}
+  else if(a==='del'){const dr=S.rounds.find(r=>r.t===+v);if(dr)qDel(dr);S.rounds=S.rounds.filter(r=>r.t!==+v)}
   else if(a==='goal'){gd=S.goal?Object.assign({},S.goal):{kind:'z',z:'C1X',m:Math.max(4,S.dist),pct:60};gOpen=true}
   else if(a==='gk')gd.kind=v;
   else if(a==='gz')gd.z=v;
@@ -285,13 +385,24 @@ document.addEventListener('click',e=>{
   else if(a==='gclear'){S.goal=null;gOpen=false}
   else if(a==='gcancel')gOpen=false;
   else if(a==='gx'){if(e.target!==b)return;gOpen=false}
+  else if(a==='c-email'){showEm=true;return render()}
+  else if(a==='c-google')return cloudAuth('google');
+  else if(a==='c-in')return cloudAuth('in');
+  else if(a==='c-new')return cloudAuth('new');
+  else if(a==='c-reset')return cloudAuth('reset');
+  else if(a==='c-out')return cloudAuth('out');
+  else if(a==='c-sync')return sync(true);
+  else if(a==='c-del')return cloudDelete();
   else if(a==='vipps')return copyVipps();
-  else if(a==='wipe'){if(!confirm('Delete all '+S.rounds.length+' rounds? This cannot be undone.'))return;S.rounds=[];S.lastExport=0;toast('All data deleted')}
+  else if(a==='wipe'){if(!confirm('Delete all '+S.rounds.length+' rounds? This cannot be undone.'))return;S.rounds.forEach(qDel);S.rounds=[];S.lastExport=0;toast('All data deleted')}
   else if(a==='export')return exportData();
   save();render();
 });
 document.addEventListener('change',e=>{if(e.target.classList&&e.target.classList.contains('win')){const z=e.target.dataset.z,i=+e.target.dataset.i;let v=Math.round(+e.target.value);v=Math.min(500,Math.max(5,isNaN(v)?20:v));S.win[z][i]=v;e.target.value=v;save();toast('Saved');return}if(e.target.id==='mtr'){tm=+e.target.value;render()}if(e.target.id==='imp'&&e.target.files[0])importData(e.target.files[0])});
 render();
+initCloud();
+addEventListener('online',()=>sync(true));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&user&&Date.now()-lastSyncAt>3e5)sync(true)});
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
