@@ -51,14 +51,15 @@ select{font:inherit;width:100%;margin-top:10px;padding:12px;border-radius:12px;b
 a.btn{text-decoration:none}
 .stand+.stand{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
 .win,.inp{width:100%;font:inherit;padding:8px;margin-top:4px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
-#gm{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:5}
-#gm>div{background:var(--card);border-radius:20px;padding:16px;width:min(340px,92vw);max-height:92vh;overflow-y:auto}
+#gm,#wm{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:5}
+#gm>div,#wm>div{background:var(--card);border-radius:20px;padding:16px;width:min(340px,92vw);max-height:92vh;overflow-y:auto}
 .dot{width:10px;height:10px;border-radius:50%;flex:none}
 .bar{flex:1;height:14px;border-radius:7px;background:var(--track);overflow:hidden}
 .bar i{display:block;height:100%;background:var(--hit);border-radius:7px}
 .row .r{width:84px;text-align:right;font-size:14px;flex:none}
 .list .row{border-top:1px solid var(--line)}
 .lnk{display:block;margin:12px auto 0;background:none;color:var(--mute);font-size:14px;text-decoration:underline}
+.cog{width:36px;height:36px;border-radius:50%;background:var(--track);color:var(--mute);display:flex;align-items:center;justify-content:center;padding:0}
 .x{background:none;color:var(--mute);font-size:20px;padding:0 6px}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;padding:16px 0;background:none;font-weight:700;color:var(--mute)}
@@ -77,6 +78,7 @@ input[type=file]{width:100%;margin-top:8px}
 <div id="toast"></div>
 <div id="pad" data-a="padx"><div><p>Discs thrown</p><section></section></div></div>
 <div id="gm" data-a="gx"><div></div></div>
+<div id="wm" data-a="wx"><div></div></div>
 <nav><button data-a="tab" data-v="log">Log</button><button data-a="tab" data-v="today">Today</button><button data-a="tab" data-v="trends">Trends</button><button data-a="tab" data-v="settings">Settings</button></nav>
 <script>
 const VIPPS_NUMBER='4166NL'; // copied to clipboard on tap, never shown on screen
@@ -91,7 +93,7 @@ const FIREBASE_CONFIG={ // public project identifiers, not secrets: the Firestor
   appId:"1:788451489545:web:2b43822c3f1666c80a45d8"
 };
 const K='puttlog.v1';
-let S={rounds:[],discs:3,dist:6,lastExport:0,win:{},goal:null,pend:[],pdel:[],cloudUid:'',lastPull:0,sSig:''},tab='log',tt,padOpen=false,trend='zones',tm=null,gOpen=false,gd=null,fb=null,user=null,syncing=false,cloudMsg='',st,lastSyncAt=0,showEm=false;
+let S={rounds:[],discs:3,dist:6,lastExport:0,win:{},goal:null,pend:[],pdel:[],cloudUid:'',lastPull:0,sSig:''},tab='log',tt,padOpen=false,trend='zones',tm=null,gOpen=false,gd=null,fb=null,user=null,syncing=false,cloudMsg='',st,lastSyncAt=0,showEm=false,wOpen=false;
 try{const r=localStorage.getItem(K);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 S.dist=Math.max(4,S.dist);
 S.win=Object.assign({'C1X':[30,30],'C2':[20,20],'Outside C2':[10,10]},S.win);
@@ -215,17 +217,20 @@ function trendsView(){
   ${goalCard()}
   <div class="card">${chips}${sel}</div>
   <div class="card"><h2>Hit rate per practice day</h2>${chart}</div>
-  <div class="card"><h2>Where you stand</h2>${rows}<p class="mute">Big number: today (or your latest practice day). Arrows compare it with earlier putts. Window sizes are in Settings.</p></div>`;
+  <div class="card"><h2 style="display:flex;justify-content:space-between;align-items:center">Where you stand<button class="cog" data-a="wopen" aria-label="Comparison settings"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button></h2>${rows}<p class="mute">Big number: today (or your latest practice day). Arrows compare it with earlier putts. Tap the gear to change how many putts are compared.</p></div>`;
 }
 
 function dataView(){
   const n=S.rounds.filter(r=>r.t>S.lastExport),p=sum(n).n;
   const when=S.lastExport?Math.floor((Date.now()-S.lastExport)/864e5)+' days ago ('+day(S.lastExport)+')':'Never';
   const sup=(VIPPS_URL||VIPPS_NUMBER||FEEDBACK_URL)?`<div class="card"><h2>Support</h2><p class="mute">Enjoying it? Tips and bug reports are welcome.</p>${FEEDBACK_URL?`<a class="btn alt" href="${FEEDBACK_URL}" target="_blank" rel="noopener">Send feedback</a>`:''}${VIPPS_URL?`<a class="btn" href="${VIPPS_URL}" target="_blank" rel="noopener">Support with Vipps</a>`:VIPPS_NUMBER?`<button class="btn" data-a="vipps">Support with Vipps</button><p class="mute">Copies my Vipps code. Open Vipps and paste it.</p>`:''}</div>`:'';
-  const wr=['C1X','C2','Outside C2'].map(z=>`<div class="row"><span class="l" style="width:96px">${z}</span><label class="mute" style="flex:1;font-size:13px">Previous<input class="win" type="number" inputmode="numeric" min="5" max="500" data-z="${z}" data-i="0" value="${S.win[z][0]}"></label><label class="mute" style="flex:1;font-size:13px">First<input class="win" type="number" inputmode="numeric" min="5" max="500" data-z="${z}" data-i="1" value="${S.win[z][1]}"></label></div>`).join('');
   return `${accountCard()}<div class="card"><h2>Backup</h2><p>Last exported: <b>${when}</b></p><p>Since then: <b>${p} putts</b> in ${n.length} rounds</p>
   <button class="btn" data-a="export">Export backup</button></div>
-  <div class="card"><h2>Restore</h2><p class="mute">Adds rounds from a backup file. Rounds already here are kept and never duplicated.</p><input type="file" accept=".json,application/json" id="imp"></div>${sup}<div class="card"><h2>Trend comparison</h2><p class="mute">Trends compares today with the previous and the first number of putts below, per zone.</p>${wr}</div><div class="card"><h2>Reset</h2><p class="mute">Deletes all rounds in this browser, and from your cloud account if signed in. Export first if unsure.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="wipe">Delete all data</button></div>`;
+  <div class="card"><h2>Restore</h2><p class="mute">Adds rounds from a backup file. Rounds already here are kept and never duplicated.</p><input type="file" accept=".json,application/json" id="imp"></div>${sup}<div class="card"><h2>Reset</h2><p class="mute">Deletes all rounds in this browser${user?', and from your cloud account':''}. Export first if unsure.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="wipe">Delete all data</button>${user?'<p class="mute" style="margin-top:14px">Deletes your cloud account and everything stored in it. Putts on this phone stay.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="c-del">Delete my cloud data and account</button>':''}</div>`;
+}
+
+function winModal(){
+  return `<h2>Compare with earlier putts</h2><p class="mute">Where you stand compares your latest day with the previous and the first number of putts below, per zone.</p>${['C1X','C2','Outside C2'].map(z=>`<div class="row"><span class="l" style="width:96px">${z}</span><label class="mute" style="flex:1;font-size:13px">Previous<input class="win" type="number" inputmode="numeric" min="5" max="500" data-z="${z}" data-i="0" value="${S.win[z][0]}"></label><label class="mute" style="flex:1;font-size:13px">First<input class="win" type="number" inputmode="numeric" min="5" max="500" data-z="${z}" data-i="1" value="${S.win[z][1]}"></label></div>`).join('')}<button class="btn" data-a="wx2">Done</button>`;
 }
 
 function render(){
@@ -233,6 +238,8 @@ function render(){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===tab));
   $('#gm').style.display=gOpen?'flex':'none';
   if(gOpen)$('#gm>div').innerHTML=goalModal();
+  $('#wm').style.display=wOpen?'flex':'none';
+  if(wOpen)$('#wm>div').innerHTML=winModal();
   $('#pad').style.display=padOpen?'flex':'none';
   $('#pad section').innerHTML=[1,2,3,4,5,6,7,8,9].map(i=>`<button class="${i===S.discs?'on':''}" data-a="discs" data-v="${i}">${i}</button>`).join('');
 }
@@ -324,7 +331,7 @@ function accountCard(){
   if(!fb)return h(`<p class="mute">${esc(cloudMsg||'Loading cloud...')}</p>`);
   if(!user)return h(`<p class="mute">Sign in to save your putts in the cloud so you never lose them. Your putts and email are stored in Google Firebase (EU). You can delete everything at any time.</p><button class="btn" data-a="c-google">Continue with Google</button>${showEm?`<input class="inp" id="em" type="email" placeholder="Email" autocomplete="email" style="margin-top:12px"><input class="inp" id="pw" type="password" placeholder="Password (min 6 characters)" autocomplete="current-password"><button class="btn alt" data-a="c-in">Sign in</button><button class="btn alt" data-a="c-new">Create account</button><button class="btn alt" data-a="c-reset">Forgot password</button>`:'<button class="lnk" data-a="c-email">Use email instead</button>'}`);
   const w=S.pend.length+S.pdel.length;
-  return h(`<p>Signed in as <b>${esc(user.email||'anonymous')}</b></p><p class="mute">${esc(cloudMsg)}${w?' · '+w+' changes waiting to upload':''}</p><button class="btn" data-a="c-sync">Sync now</button><button class="btn alt" data-a="c-out">Sign out</button><button class="btn" style="background:#d9534f;color:#fff" data-a="c-del">Delete my cloud data and account</button>`);
+  return h(`<p>Signed in as <b>${esc(user.email||'anonymous')}</b></p><p class="mute">${esc(cloudMsg)}${w?' · '+w+' changes waiting to upload':''}</p><button class="btn" data-a="c-sync">Sync now</button><button class="btn alt" data-a="c-out">Sign out</button>`);
 }
 
 function copyVipps(){
@@ -385,6 +392,9 @@ document.addEventListener('click',e=>{
   else if(a==='gclear'){S.goal=null;gOpen=false}
   else if(a==='gcancel')gOpen=false;
   else if(a==='gx'){if(e.target!==b)return;gOpen=false}
+  else if(a==='wopen')wOpen=true;
+  else if(a==='wx'){if(e.target!==b)return;wOpen=false}
+  else if(a==='wx2')wOpen=false;
   else if(a==='c-email'){showEm=true;return render()}
   else if(a==='c-google')return cloudAuth('google');
   else if(a==='c-in')return cloudAuth('in');
