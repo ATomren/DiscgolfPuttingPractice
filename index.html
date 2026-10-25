@@ -70,7 +70,6 @@ nav button.on{color:var(--acc)}
 .stats b{display:block;font-size:26px}
 #toast{position:fixed;left:14px;right:14px;bottom:calc(76px + env(safe-area-inset-bottom));max-width:492px;margin:0 auto;background:var(--ink);color:var(--card);padding:12px 16px;border-radius:14px;display:none;justify-content:space-between;align-items:center}
 #toast button{background:none;color:var(--acc);font-weight:800}
-input[type=file]{width:100%;margin-top:8px}
 </style>
 </head>
 <body>
@@ -224,9 +223,8 @@ function dataView(){
   const n=S.rounds.filter(r=>r.t>S.lastExport),p=sum(n).n;
   const when=S.lastExport?Math.floor((Date.now()-S.lastExport)/864e5)+' days ago ('+day(S.lastExport)+')':'Never';
   const sup=(VIPPS_URL||VIPPS_NUMBER||FEEDBACK_URL)?`<div class="card"><h2>Support</h2><p class="mute">Enjoying it? Tips and bug reports are welcome.</p>${FEEDBACK_URL?`<a class="btn alt" href="${FEEDBACK_URL}" target="_blank" rel="noopener">Send feedback</a>`:''}${VIPPS_URL?`<a class="btn" href="${VIPPS_URL}" target="_blank" rel="noopener">Support with Vipps</a>`:VIPPS_NUMBER?`<button class="btn" data-a="vipps">Support with Vipps</button><p class="mute">Copies my Vipps code. Open Vipps and paste it.</p>`:''}</div>`:'';
-  return `${accountCard()}<div class="card"><h2>Backup</h2><p>Last exported: <b>${when}</b></p><p>Since then: <b>${p} putts</b> in ${n.length} rounds</p>
-  <button class="btn" data-a="export">Export backup</button></div>
-  <div class="card"><h2>Restore</h2><p class="mute">Adds rounds from a backup file. Rounds already here are kept and never duplicated.</p><input type="file" accept=".json,application/json" id="imp"></div>${sup}<div class="card"><h2>Reset</h2><p class="mute">Deletes all rounds in this browser${user?', and from your cloud account':''}. Export first if unsure.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="wipe">Delete all data</button>${user?'<p class="mute" style="margin-top:14px">Deletes your cloud account and everything stored in it. Putts on this phone stay.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="c-del">Delete my cloud data and account</button>':''}</div>`;
+  return `${accountCard()}<div class="card"><h2>Backup</h2><p class="mute">Last export: ${when}. Since then: ${p} putts in ${n.length} rounds. Restore adds rounds from a file and never duplicates.</p>
+  <div style="display:flex;gap:8px"><button class="btn" style="flex:1" data-a="export">Export</button><label class="btn alt" style="flex:1;cursor:pointer">Restore<input type="file" accept=".json,application/json" id="imp" hidden></label></div></div>${sup}<div class="card"><h2>Reset</h2><p class="mute">Deletes all rounds in this browser${user?', and from your cloud account':''}. Export first if unsure.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="wipe">Delete all data</button>${user?'<p class="mute" style="margin-top:14px">Deletes your cloud account and everything stored in it. Putts on this phone stay.</p><button class="btn" style="background:#d9534f;color:#fff" data-a="c-del">Delete my cloud data and account</button>':''}</div>`;
 }
 
 function winModal(){
