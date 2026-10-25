@@ -81,7 +81,14 @@ input[type=file]{width:100%;margin-top:8px}
 const VIPPS_NUMBER='4166NL'; // copied to clipboard on tap, never shown on screen
 const VIPPS_URL='';     // paste your Vipps link here (leave empty to hide)
 const FEEDBACK_URL='https://docs.google.com/forms/d/e/1FAIpQLScGDWXz6PX2gsrNYgSjqVr2vagVfksTCPE0ZS_LOUvTBoHH2w/viewform';  // paste a feedback form link here (leave empty to hide)
-const FIREBASE_CONFIG=null; // paste your firebaseConfig object here (see PROJECT.md). null = local only
+const FIREBASE_CONFIG={ // public project identifiers, not secrets: the Firestore rules protect the data. null = local only
+  apiKey:"AIzaSyCxqPawrzt9YDiMdJiyYScWY78rWd13Ii0",
+  authDomain:"discgolfputtingpractice.firebaseapp.com",
+  projectId:"discgolfputtingpractice",
+  storageBucket:"discgolfputtingpractice.firebasestorage.app",
+  messagingSenderId:"788451489545",
+  appId:"1:788451489545:web:2b43822c3f1666c80a45d8"
+};
 const K='puttlog.v1';
 let S={rounds:[],discs:3,dist:6,lastExport:0,win:{},goal:null,pend:[],pdel:[],cloudUid:'',lastPull:0,sSig:''},tab='log',tt,padOpen=false,trend='zones',tm=null,gOpen=false,gd=null,fb=null,user=null,syncing=false,cloudMsg='',st,lastSyncAt=0;
 try{const r=localStorage.getItem(K);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
