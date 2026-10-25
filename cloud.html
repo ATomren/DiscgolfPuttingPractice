@@ -58,6 +58,7 @@ a.btn{text-decoration:none}
 .bar i{display:block;height:100%;background:var(--hit);border-radius:7px}
 .row .r{width:84px;text-align:right;font-size:14px;flex:none}
 .list .row{border-top:1px solid var(--line)}
+.lnk{display:block;margin:12px auto 0;background:none;color:var(--mute);font-size:14px;text-decoration:underline}
 .x{background:none;color:var(--mute);font-size:20px;padding:0 6px}
 nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 nav button{flex:1;padding:16px 0;background:none;font-weight:700;color:var(--mute)}
@@ -90,7 +91,7 @@ const FIREBASE_CONFIG={ // public project identifiers, not secrets: the Firestor
   appId:"1:788451489545:web:2b43822c3f1666c80a45d8"
 };
 const K='puttlog.v1';
-let S={rounds:[],discs:3,dist:6,lastExport:0,win:{},goal:null,pend:[],pdel:[],cloudUid:'',lastPull:0,sSig:''},tab='log',tt,padOpen=false,trend='zones',tm=null,gOpen=false,gd=null,fb=null,user=null,syncing=false,cloudMsg='',st,lastSyncAt=0;
+let S={rounds:[],discs:3,dist:6,lastExport:0,win:{},goal:null,pend:[],pdel:[],cloudUid:'',lastPull:0,sSig:''},tab='log',tt,padOpen=false,trend='zones',tm=null,gOpen=false,gd=null,fb=null,user=null,syncing=false,cloudMsg='',st,lastSyncAt=0,showEm=false;
 try{const r=localStorage.getItem(K);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
 S.dist=Math.max(4,S.dist);
 S.win=Object.assign({'C1X':[30,30],'C2':[20,20],'Outside C2':[10,10]},S.win);
@@ -321,7 +322,7 @@ function accountCard(){
   const h=b=>`<div class="card"><h2>Account</h2>${b}</div>`;
   if(!FIREBASE_CONFIG)return h('<p class="mute">Cloud sync is not set up in this version.</p>');
   if(!fb)return h(`<p class="mute">${esc(cloudMsg||'Loading cloud...')}</p>`);
-  if(!user)return h(`<p class="mute">Sign in to save your putts in the cloud so you never lose them. Your putts and email are stored in Google Firebase (EU). You can delete everything at any time.</p><button class="btn" data-a="c-google">Continue with Google</button><input class="inp" id="em" type="email" placeholder="Email" autocomplete="email" style="margin-top:12px"><input class="inp" id="pw" type="password" placeholder="Password (min 6 characters)" autocomplete="current-password"><button class="btn alt" data-a="c-in">Sign in</button><button class="btn alt" data-a="c-new">Create account</button><button class="btn alt" data-a="c-reset">Forgot password</button>`);
+  if(!user)return h(`<p class="mute">Sign in to save your putts in the cloud so you never lose them. Your putts and email are stored in Google Firebase (EU). You can delete everything at any time.</p><button class="btn" data-a="c-google">Continue with Google</button>${showEm?`<input class="inp" id="em" type="email" placeholder="Email" autocomplete="email" style="margin-top:12px"><input class="inp" id="pw" type="password" placeholder="Password (min 6 characters)" autocomplete="current-password"><button class="btn alt" data-a="c-in">Sign in</button><button class="btn alt" data-a="c-new">Create account</button><button class="btn alt" data-a="c-reset">Forgot password</button>`:'<button class="lnk" data-a="c-email">Use email instead</button>'}`);
   const w=S.pend.length+S.pdel.length;
   return h(`<p>Signed in as <b>${esc(user.email||'anonymous')}</b></p><p class="mute">${esc(cloudMsg)}${w?' · '+w+' changes waiting to upload':''}</p><button class="btn" data-a="c-sync">Sync now</button><button class="btn alt" data-a="c-out">Sign out</button><button class="btn" style="background:#d9534f;color:#fff" data-a="c-del">Delete my cloud data and account</button>`);
 }
@@ -384,6 +385,7 @@ document.addEventListener('click',e=>{
   else if(a==='gclear'){S.goal=null;gOpen=false}
   else if(a==='gcancel')gOpen=false;
   else if(a==='gx'){if(e.target!==b)return;gOpen=false}
+  else if(a==='c-email'){showEm=true;return render()}
   else if(a==='c-google')return cloudAuth('google');
   else if(a==='c-in')return cloudAuth('in');
   else if(a==='c-new')return cloudAuth('new');
